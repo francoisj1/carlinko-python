@@ -6,12 +6,11 @@ Main CarLinko API client.
 
 from __future__ import annotations
 
-import httpx
+from pprint import pprint
 
 from .auth import Authentication
 from .exceptions import (
     ApiError,
-    AuthenticationError,
     VehicleNotFound,
 )
 from .models import (
@@ -32,12 +31,9 @@ class CarLinkoClient:
         region: str = "saf",
         *,
         timeout: int = 20,
+        debug: bool = False,
     ):
 
-        #
-        # The CarLinko API calls this "account".
-        # The SDK exposes it as "email".
-        #
         self.auth = Authentication(
             account=email,
             password=password,
@@ -46,33 +42,26 @@ class CarLinkoClient:
         )
 
         self.http = self.auth.client
+        self.debug = debug
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # Authentication
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def login(self) -> str:
-        """
-        Authenticate against CarLinko.
-
-        Returns
-        -------
-        str
-            Access token.
-        """
         return self.auth.login()
 
     @property
-    def token(self) -> str | None:
+    def token(self):
         return self.auth.token
 
     @property
-    def authenticated(self) -> bool:
+    def authenticated(self):
         return self.auth.token is not None
 
-    # -------------------------------------------------------------
-    # Generic request
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
+    # Generic Request
+    # ---------------------------------------------------------
 
     def request(
         self,
@@ -81,9 +70,20 @@ class CarLinkoClient:
         *,
         params: dict | None = None,
         json: dict | None = None,
-    ) -> dict:
+    ):
 
         body = json or {}
+
+        if self.debug:
+            print(f"\n>>> {method} {endpoint}")
+
+            if params:
+                print("Query Parameters:")
+                pprint(params)
+
+            if body:
+                print("Request Body:")
+                pprint(body)
 
         response = self.http.request(
             method=method,
@@ -93,32 +93,27 @@ class CarLinkoClient:
             headers=self.auth.headers(body),
         )
 
+        if self.debug:
+            print(f"HTTP {response.status_code}")
+
         response.raise_for_status()
 
         payload = response.json()
 
-        #
-        # Successful responses use:
-        #
-        # {
-        #     "code":"0000",
-        #     "msg":"success",
-        #     "data": ...
-        # }
-        #
+        if self.debug:
+            print("Response:")
+            pprint(payload)
 
         code = str(payload.get("code"))
 
         if code != "0000":
-            raise ApiError(
-                payload.get("msg", payload)
-            )
+            raise ApiError(payload.get("msg", payload))
 
         return payload.get("data")
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # User
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def get_profile(self) -> User:
 
@@ -129,16 +124,22 @@ class CarLinkoClient:
 
         return User.from_api(data)
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # Vehicles
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
-    def get_vehicles(self) -> list[Vehicle]:
+    def get_vehicles(self):
 
         data = self.request(
             "GET",
             "/user/vehicle",
         )
+
+        if self.debug:
+            print("\n==============================")
+            print("RAW VEHICLE RESPONSE")
+            print("==============================")
+            pprint(data)
 
         if not data:
             return []
@@ -146,6 +147,15 @@ class CarLinkoClient:
         vehicles = []
 
         for item in data:
+
+            if self.debug:
+
+                print("\nVehicle Fields")
+                print("------------------------------")
+
+                for key in sorted(item.keys()):
+                    print(f"{key:30} : {item[key]}")
+
             vehicles.append(
                 Vehicle.from_api(item)
             )
@@ -159,51 +169,51 @@ class CarLinkoClient:
 
         for vehicle in self.get_vehicles():
 
-            if vehicle.id == vehicle_id:
+            if str(vehicle.id) == str(vehicle_id):
                 return vehicle
 
         raise VehicleNotFound(vehicle_id)
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # Terminal
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def get_terminal(
         self,
-        vehicle_id: str,
-    ) -> dict:
+        vehicle_id,
+    ):
 
         return self.request(
             "GET",
             f"/user/vehicle/terminal/{vehicle_id}",
         )
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # WebSocket
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def get_websocket(
         self,
-        device_sn: str,
-    ) -> dict:
+        device_sn,
+    ):
 
         return self.request(
             "GET",
             f"/netty/getConnect/2/{device_sn}",
         )
 
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
     # Raw API
-    # -------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def raw(
         self,
-        endpoint: str,
+        endpoint,
         *,
-        method: str = "GET",
-        params: dict | None = None,
-        json: dict | None = None,
-    ) -> dict:
+        method="GET",
+        params=None,
+        json=None,
+    ):
 
         return self.request(
             method,

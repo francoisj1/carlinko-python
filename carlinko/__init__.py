@@ -1,5 +1,5 @@
 """
-carlinko
+carlinko-python
 
 Python SDK for the CarLinko connected vehicle platform.
 
@@ -10,14 +10,13 @@ Example
 >>> client = CarLinkoClient(
 ...     email="user@example.com",
 ...     password="password",
-...     region="saf",
+...     region="sea",
 ... )
 >>>
 >>> client.login()
 >>> vehicles = client.get_vehicles()
 """
 
-from .auth import Authentication
 from .client import CarLinkoClient
 
 from .models import (
@@ -37,7 +36,7 @@ from .exceptions import (
 )
 
 __title__ = "carlinko"
-__description__ = "Python SDK for CarLinko connected vehicles."
+__description__ = "Python SDK for the CarLinko connected vehicle platform."
 __version__ = "0.1.0"
 __author__ = "Francois Janzen van Nieuwenhuizen"
 __license__ = "MIT"
@@ -45,7 +44,6 @@ __license__ = "MIT"
 __all__ = [
     # Main Client
     "CarLinkoClient",
-    "Authentication",
 
     # Models
     "User",
