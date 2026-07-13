@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 
 
-DEFAULT_REGION = "ZA"
+DEFAULT_REGION = "saf"
 
 # Reuse the signing key recovered from the dashboard.
 SIGN_KEY = "mYj3fzMpn77bir66"
